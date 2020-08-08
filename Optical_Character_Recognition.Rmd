@@ -1,0 +1,167 @@
+---
+title: "Optical Character Recognition"
+author: "K Sai Chandana Amulya"
+date: "28/07/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Optical Character Recognition is the process of finding and recognizing text inside images,reading pdf files, for example from a screenshot, scanned paper.
+
+
+IMAGE LINK:https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Hamilton_Men_I_Have_Painted_007.jpg/1200px-Hamilton_Men_I_Have_Painted_007.jpg
+```{r}
+#Extracting the text from the Images.
+#We use tesseract package to extract the text from images.
+
+#Calling the tesseract
+library(tesseract)
+
+#Assigning the text in the language required.Here we used eng-ENGLISH.
+eng <- tesseract("eng")
+
+
+#Extracting the text from the image(png/jpg file) that we provided.Here we can use a direct url from the souce or the path that is actually saved.
+text <- tesseract::ocr("https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Hamilton_Men_I_Have_Painted_007.jpg/1200px-Hamilton_Men_I_Have_Painted_007.jpg", engine = eng)
+cat(text)
+```
+
+
+Now we will see how many words are there in the text and its bounding box with confidence rate
+```{r}
+
+
+#Here we use ocr_data() function to retrieve all the words,bounded box and confidence rate
+results <- tesseract::ocr_data("https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Hamilton_Men_I_Have_Painted_007.jpg/1200px-Hamilton_Men_I_Have_Painted_007.jpg", engine = eng)
+results
+```
+As we can see here, the text extracted is showing 251 rows i.e there are 251 words in the text and also showing its confidence rate(used to indicate how accurate a calculated statistic is likely to be) and bounding box(location of the word position). 
+As here in 1-10 rows we can see that word/letter T,of,were,could,one,the have highest confident rate compared to any other word/letter.
+-------------------------------------------------------------------------------
+
+
+The tesseract OCR engine uses language-specific training data in the recognition of the words. The OCR algorithms bias towards words and sentences that frequently appear together in a given language, Therefore the most accurate results will be obtained when using training data in the correct language.
+
+
+```{r}
+#Use tesseract_info() to list the languages that we have currently have installed.
+
+tesseract_info()
+```
+
+Here from the tesseract info we can see from the package is located,the availability of languages that we can use,version of the package that is currently running on and configs of the package that are available to be used.
+
+-------------------------------------------------------------------------------
+
+Download the french language to extract text from this language
+```{r}
+tesseract_download("fra")
+
+```
+
+
+
+
+Using French language to recognize the characters in the image
+```{r}
+(french<-tesseract("fra"))
+```
+
+
+
+
+Converting a french image  into text
+
+IMAGE LINK:https://i.pinimg.com/236x/fd/28/96/fd2896a866915abcf5f855ee7e42de01--core-french-french-class.jpg
+```{r}
+text_french<-ocr("https://i.pinimg.com/236x/fd/28/96/fd2896a866915abcf5f855ee7e42de01--core-french-french-class.jpg",engine = french)
+cat(text_french)
+```
+Here we can how the french image is converted into text
+
+
+------------------------------------------------------------------------------
+The accuracy of the Optical Character Recognition process depends on the quality of the input image. The improvement of the image results can be done  properly scaling the image, removing noise and artifacts or cropping the area where the text exists. 
+
+These are functions are used in magick package for pre processing the image:
+
+1. If image is skewed, we use image_deskew() and image_rotate() make the text horizontal.
+2. image_trim() crops out whitespace in the margins. Increases the fuzz parameter to make it work for noisy whitespace.
+
+3. image_convert() to turn the image into greyscale, which can reduce artifacts and enhance actual text.
+
+4. If image is very large or small resizing with image_resize() can help tesseract determine text size.
+
+5. image_modulate() or image_contrast() or image_contrast() to tweak brightness / contrast if it is an issue.
+
+6. image_reducenoise() for automated noise removal. May be mileage may vary.
+With image_quantize() you can reduce the number of colors in the image. This can sometimes help with increasing contrast and reducing artifacts.
+
+7. imaging ninjas can use image_convolve() to use custom convolution methods.
+
+Now lets convert the code into black-and-white and resizes + crops the image before getting more accurate OCR results.
+
+
+IMAGE LINK: https://lh3.googleusercontent.com/proxy/rUMyI2S5PRxBaS3i98cMb_4TKdevjTyFYpwfaOUfmt8j0beFbq2feJs=w1200-h630-p-k-no-nu
+```{r}
+#Calling the library Magick
+library(magick)
+
+#Read the image
+inputImage<-image_read("https://lh3.googleusercontent.com/proxy/rUMyI2S5PRxBaS3i98cMb_4TKdevjTyFYpwfaOUfmt8j0beFbq2feJs=w1200-h630-p-k-no-nu")
+
+
+#Pre processing the image with the required parameters
+text_preprocess_image <- inputImage %>%
+  image_resize("2000x") %>%
+  image_convert(type = 'Grayscale') %>%
+  image_trim(fuzz = 40) %>%
+  image_write(format = 'png', density = '300x300') %>%
+  tesseract::ocr() 
+
+cat(text_preprocess_image)
+```
+
+
+
+READING THE CHARACTERS FROM THE PDF FILES
+Image Link: https://ichef.bbci.co.uk/news/208/cpsprodpb/12309/production/_104750547_baker_letter_976-nc.png
+Convert into pdf file
+
+
+Extract the pdf file to png file
+```{r}
+#pdf_convert() function is used to convert the pdf file into proper image file to convert into text 
+png_To_pdf_file <- pdftools::pdf_convert("C:/Users/Amulya/Downloads/_104750547_baker_letter_976-nc-converted.pdf", dpi = 600)
+
+```
+
+
+The pdf file text
+```{r}
+text_pdf_file <- tesseract::ocr(png_To_pdf_file)
+cat(text_pdf_file)
+```
+As we can see almost the pdf(image file) file is converted into the text
+
+
+
+------------------------------------------------------------------------------
+Tesseract supports hundreds of control parameters which alter the OCR engine. One of the parameter is "tessedit_char_whitelist" which restricts the output to a limited set of characters. This may be useful for reading for example numbers such as a bank account, zip code, or gas meter.
+
+Reading the numbers from the noisy image
+IMAGE LINK:https://i.stack.imgur.com/PS0Rj.png
+```{r}
+numbers_text <- tesseract(options = list(tessedit_char_whitelist = ".0123456789"))
+cat(ocr("https://i.stack.imgur.com/PS0Rj.png", engine = numbers_text))
+```
+
+
+
+
+------------------------------------------------------------------------------
+CONCLUSION:
+
+Hereby its concluded that using a image the conversion is done to the text by scanning the image or pdf files and also recognising the numbers and representing them
